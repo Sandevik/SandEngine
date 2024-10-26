@@ -1,7 +1,7 @@
 export default class Screen {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
-    private currentImageData: ImageData = new ImageData(1,1);
+    private activeImageBuffer: Uint8ClampedArray = new Uint8ClampedArray(1);
 
     constructor(){
         this.canvas = document.createElement("canvas");
@@ -25,26 +25,36 @@ export default class Screen {
             buf[i + 2] = 0;
             buf[i + 3] = 255;
         }
-        this.setPixelBufferValue(buf)
-        this.render()
+        this.updateScreen(buf)
     }
 
-    public setPixelBufferValue(buffer: Uint8ClampedArray): void {
-        this.currentImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-        this.currentImageData.data.set(buffer);
+    private setPixelBuffer(buffer: Uint8ClampedArray): void {
+        this.activeImageBuffer = buffer;
     }
 
-    public render(): void {
-        this.ctx.putImageData(this.currentImageData, 0, 0)
+    private render(): void {
+        const currentImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+        currentImageData.data.set(this.activeImageBuffer);
+        this.ctx.putImageData(currentImageData, 0, 0)
     }
 
     public updateScreen(buffer: Uint8ClampedArray): void {
-        this.currentImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-        this.currentImageData.data.set(buffer);
-        this.ctx.putImageData(this.currentImageData, 0, 0)
+        this.setPixelBuffer(buffer);
+        this.render();
     }
 
 
+
+    public drawPixel(pos: {x: number, y: number}, color: number[]) {
+        const pixelPos = pos.x*4 + pos.y*this.canvas.width*4;
+        const newBuffer = this.activeImageBuffer;
+        newBuffer[pixelPos] = color[0];
+        newBuffer[pixelPos + 1] = color[1];
+        newBuffer[pixelPos + 2] = color[2];
+        newBuffer[pixelPos + 3] = color[3];
+
+        this.updateScreen(newBuffer);
+    }
 
 
 }

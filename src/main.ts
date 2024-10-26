@@ -1,5 +1,11 @@
 import './style.css'
 import Screen from './Screen'
-// setup canvas element
+
 
 const screen = new Screen();
+
+screen.drawPixel({x: 10, y: 20}, [0x001,0x001,0x001,0xfff])
+screen.drawPixel({x: 12, y: 20}, [0x001,0x001,0x001,0xfff])
+screen.drawPixel({x: 11, y: 20}, [0x001,0x001,0x001,0xfff])
+screen.drawPixel({x: 13, y: 20}, [0x001,0x001,0x001,0xfff])
+screen.drawPixel({x: 14, y: 20}, [0x001,0x001,0x001,0xfff])
