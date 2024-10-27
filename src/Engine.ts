@@ -1,10 +1,7 @@
-
-
-
 export default class Engine {
+    private config: IEngineConfig; 
     private dimensions: {width: number, height: number;}
-    private state: IEngineState = {mouseOneDown: false};
-
+    private state: IEngineState = {mouseOneDown: false, buttonsPressed: []};
     private canvas: HTMLCanvasElement;
     private gl: WebGLRenderingContext;
     private buffer: WebGLBuffer;
@@ -12,7 +9,8 @@ export default class Engine {
     private texture: WebGLTexture;
     private activeImageBuffer: Uint8ClampedArray
 
-    constructor(){
+    constructor(config?: IEngineConfig){
+        this.config = config || {} as IEngineConfig;
         this.canvas = document.createElement("canvas");
         document.querySelector("body")?.appendChild(this.canvas);
 
@@ -38,6 +36,14 @@ export default class Engine {
         });
         this.canvas.addEventListener("mouseup", () => {
             this.state.mouseOneDown = false
+        })
+
+        window.addEventListener("keydown", (e) => {
+            if (!this.state.buttonsPressed.includes(e.key)) this.state.buttonsPressed.push(e.key);
+        })
+
+        window.addEventListener("keyup", (e) => {
+            this.state.buttonsPressed = this.state.buttonsPressed.filter(key => key !== e.key);
         })
 
 
@@ -79,6 +85,7 @@ export default class Engine {
 
         this.activeImageBuffer = buffer;
         this.updateScreen(buffer)
+        this.loop();
 
     }
 
@@ -133,7 +140,9 @@ export default class Engine {
     }
     
     public updateScreen(buffer: Uint8ClampedArray): void {
+        
         this.activeImageBuffer = buffer;
+        
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.canvas.width, this.canvas.height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, buffer);
         this.render();
@@ -153,6 +162,14 @@ export default class Engine {
         return this.dimensions;
     }
     
+    // Some type of game loop
+    private loop(): void {
+        setInterval(() => {
+            //Todo: Add some type of check to see if the image buffer actually has changed before updating the screen
+            this.updateScreen(this.activeImageBuffer);
+        }, 1/(this.config.updateFrequency|| 60)*1000);
+    }
+
 
     public drawPixel(pos: {x: number, y: number}, color: number[]): void {
         const pixelPos = pos.x*4 + pos.y*this.canvas.width*4;
@@ -160,19 +177,42 @@ export default class Engine {
         this.activeImageBuffer[pixelPos + 1] = color[1];
         this.activeImageBuffer[pixelPos + 2] = color[2];
         this.activeImageBuffer[pixelPos + 3] = color[3];
-        this.updateScreen(this.activeImageBuffer);
     }
 
-    public drawSquare(positions: {x1: number, x2: number, y1: number, y2: number}, color: number[]): void {
-        for (let y = positions.y1; y < positions.y2; y++) {
-            for (let x = positions.x1; x < positions.x2; x++) {
-              this.drawPixel({x, y}, color)
-            }
+    public drawSquare(pos: {x: number, y: number}, size: "sm" | "md" | "lg" , color: number[]): void {
+        //invert height for some reason
+        pos.y = this.dimensions.height - pos.y;
+
+        switch (size) {
+            case "sm":
+                //2x2
+                this.drawPixel(pos, color)
+                this.drawPixel({x: pos.x+1, y: pos.y+1}, color)
+                this.drawPixel({x: pos.x, y: pos.y+1}, color)
+                this.drawPixel({x: pos.x+1, y: pos.y}, color)
+                this.drawPixel({x: pos.x, y: pos.y}, color)
+                break;
+            case "md":
+                //3x3
+                this.drawPixel({x: pos.x, y:pos.y}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y}, color)
+                this.drawPixel({x: pos.x, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x, y:pos.y-1}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y-1}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y-1}, color)
+
+
+                break;
+            case "lg":
+                //4x4
+                break;
         }
     }
 
-
-
+    
 
     public addEventListener(event: keyof HTMLElementEventMap, callback: (e: Event | UIEvent | MouseEvent) => void) {
         this.canvas.addEventListener(event, callback)

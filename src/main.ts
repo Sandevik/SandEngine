@@ -2,22 +2,15 @@ import './style.css'
 import Engine from './Engine'
 
 
-const screen = new Engine();
+const screen = new Engine({updateFrequency: 15});
 
-
-/* screen.addEventListener("click", (e) => {
-  console.log(e);
-  //@ts-ignore
-  const pos = {x: e.clientX - 13, y: e.clientY - 20}
-
-  screen.drawSquare({x1: 10+pos.x, x2: 20+pos.x, y1: 20+pos.y, y2: 30+pos.y},[0x001,0xfff,0x001,0xfff])
-}) */
-
-  screen.addEventListener("drag", (e) => {
+screen.addEventListener("mousedown", () => {
+  screen.addEventListener("mousemove", (e) => {
     //@ts-ignore
-    console.log(e.clientY)
+    //console.log(e.clientY)
     //@ts-ignore
-    const pos = {x: e.clientX, y:e.clientY}
-    screen.drawPixel(pos, [0x001,0x000,0xfff,0xfff])
-    //screen.drawSquare({x1: 10+pos.x, x2: 20+pos.x, y1: 20+pos.y, y2: 30+pos.y},[0x001,0x000,0xfff,0xfff])
+    const pos = {x: e.clientX, y: e.clientY}
+    screen.drawSquare(pos, "md", [0x001,0x000,0xfff,0xfff])
   })
+  screen.removeEventListener("mousemove")
+})
