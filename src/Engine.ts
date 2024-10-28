@@ -1,7 +1,13 @@
+const defaultConfig: IEngineConfig = {
+    clearColor: [0xff, 0xff, 0xff, 0xff],
+    updateFrequency: 30
+}
+
 export default class Engine {
+
     private config: IEngineConfig; 
     private dimensions: {width: number, height: number;}
-    private state: IEngineState = {mouseOneDown: {value: false, hasChanged: false}, buttonsPressed: {value: [], hasChanged: false}, mousePosition: {value: {x: 0, y: 0}, hasChanged: false}};
+    private state: IEngineState = {mouseOneDown: {value: false, hasChanged: false}, mouseOneUp: {value: false, hasChanged: false}, mouseOneClick: {value: false, hasChanged: false}, buttonsPressed: {value: [], hasChanged: false}, mousePosition: {value: {x: 0, y: 0}, hasChanged: false}};
     private canvas: HTMLCanvasElement;
     private gl: WebGLRenderingContext;
     private buffer: WebGLBuffer;
@@ -12,7 +18,7 @@ export default class Engine {
     private effects: IEffect[] = [];
 
     constructor(config?: IEngineConfig){
-        this.config = config || {} as IEngineConfig;
+        this.config = {...defaultConfig, ...config};
         this.canvas = document.createElement("canvas");
         document.querySelector("body")?.appendChild(this.canvas);
 
@@ -54,17 +60,17 @@ export default class Engine {
         this.gl.useProgram(this.program);
         this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
+        
         const buffer = new Uint8ClampedArray(this.dimensions.width * this.dimensions.height * 4);
         for (let i = 0; i < buffer.length; i += 4) {
-            buffer[i] = 255;     
-            buffer[i + 1] = 0;   
-            buffer[i + 2] = 0;   
-            buffer[i + 3] = 255;
+            buffer[i] = this.config.clearColor[0];     
+            buffer[i + 1] = this.config.clearColor[1];
+            buffer[i + 2] = this.config.clearColor[2];
+            buffer[i + 3] = this.config.clearColor[3];
         }
-
         this.activeImageBuffer = buffer;
         this.bufferHasChanged = true;
-        this.updateScreen(buffer)
+        
         this.loop();
 
     }
@@ -193,13 +199,22 @@ export default class Engine {
         })
     
         window.addEventListener("mousedown", () => {
+            this.state.mouseOneUp.value = false;
             this.state.mouseOneDown.value = true;
             this.state.mouseOneDown.hasChanged = true;
         });
     
         window.addEventListener("mouseup", () => {
-            this.state.mouseOneDown.value = false
-            this.state.mouseOneDown.hasChanged = true;
+            this.state.mouseOneDown.value = false;
+            this.state.mouseOneUp.value = true
+            this.state.mouseOneUp.hasChanged = true;
+        })
+
+        window.addEventListener("click", () => {
+            this.state.mouseOneDown.value = false;
+            this.state.mouseOneUp.value = false;
+            this.state.mouseOneClick.value = true;
+            this.state.mouseOneClick.hasChanged = true
         })
     
         window.addEventListener("keydown", (e) => {
@@ -214,7 +229,7 @@ export default class Engine {
     }
 
     private modifyBuffer(callback: () => void) {
-        this.bufferHasChanged = true
+        this.bufferHasChanged = true;
         callback()
     }
 
@@ -232,13 +247,37 @@ export default class Engine {
         const pixelPos = pos.x*4 + pos.y*this.canvas.width*4;
 
         this.modifyBuffer(() => {
-            this.activeImageBuffer[pixelPos] = color[0];
-            this.activeImageBuffer[pixelPos + 1] = color[1];
-            this.activeImageBuffer[pixelPos + 2] = color[2];
-            this.activeImageBuffer[pixelPos + 3] = color[3];
+            if (color[3] === 0xff || this.activeImageBuffer[pixelPos] === 0xff && this.activeImageBuffer[pixelPos + 1] === 0xff && this.activeImageBuffer[pixelPos+2] === 0xff && this.activeImageBuffer[pixelPos+3] === 0xff) {
+                // if opacity (alpha) of the new pixel is max, replace the pixel color
+                this.activeImageBuffer[pixelPos] = color[0];
+                this.activeImageBuffer[pixelPos + 1] = color[1];
+                this.activeImageBuffer[pixelPos + 2] = color[2];
+                this.activeImageBuffer[pixelPos + 3] = color[3];
+            } else {
+                // else combine the colors
+                this.activeImageBuffer[pixelPos] = color[0] + this.activeImageBuffer[pixelPos];
+                this.activeImageBuffer[pixelPos + 1] = color[1] + this.activeImageBuffer[pixelPos + 1];
+                this.activeImageBuffer[pixelPos + 2] = color[2] + this.activeImageBuffer[pixelPos + 2];
+                this.activeImageBuffer[pixelPos + 3] = color[3] + this.activeImageBuffer[pixelPos + 3];
+            }
+            
         })
         
     }
+
+    public clear(): void {
+        const buffer = new Uint8ClampedArray(this.dimensions.width * this.dimensions.height * 4);
+        for (let i = 0; i < buffer.length; i += 4) {
+            buffer[i] = this.config.clearColor[0];     
+            buffer[i + 1] = this.config.clearColor[1];
+            buffer[i + 2] = this.config.clearColor[2];
+            buffer[i + 3] = this.config.clearColor[3];
+        }
+        this.activeImageBuffer = buffer;
+        this.bufferHasChanged = true;
+        this.updateScreen(buffer)
+    }
+
 
     public drawSquare(pos: {x: number, y: number}, size: "sm" | "md" | "lg" , color: number[]): void {
         //invert height for some reason
@@ -268,7 +307,45 @@ export default class Engine {
 
                 break;
             case "lg":
-                //4x4
+                //5x5
+
+                //y = 0
+                this.drawPixel({x: pos.x, y:pos.y}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y}, color)
+                this.drawPixel({x: pos.x+2, y:pos.y}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y}, color)
+                this.drawPixel({x: pos.x-2, y:pos.y}, color)
+                
+                //y = 1
+                this.drawPixel({x: pos.x, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x+2, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y+1}, color)
+                this.drawPixel({x: pos.x-2, y:pos.y+1}, color)
+                
+                //y = 2
+                this.drawPixel({x: pos.x, y:pos.y+2}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y+2}, color)
+                this.drawPixel({x: pos.x+2, y:pos.y+2}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y+2}, color)
+                this.drawPixel({x: pos.x-2, y:pos.y+2}, color)
+                
+                
+                //y = -1
+                this.drawPixel({x: pos.x, y:pos.y-1}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y-1}, color)
+                this.drawPixel({x: pos.x+2, y:pos.y-1}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y-1}, color)
+                this.drawPixel({x: pos.x-2, y:pos.y-1}, color)
+                
+                //y = -2
+                this.drawPixel({x: pos.x, y:pos.y-2}, color)
+                this.drawPixel({x: pos.x+1, y:pos.y-2}, color)
+                this.drawPixel({x: pos.x+2, y:pos.y-2}, color)
+                this.drawPixel({x: pos.x-1, y:pos.y-2}, color)
+                this.drawPixel({x: pos.x-2, y:pos.y-2}, color)
+
+
                 break;
         }
     }
