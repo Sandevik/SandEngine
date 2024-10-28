@@ -139,9 +139,7 @@ export default class Engine {
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
     }
 
-    public setPixelBuffer(buffer: Uint8ClampedArray): void {
-        this.buffer = buffer;
-    }
+   
 
 
     public getDimensions(): {height: number, width: number} {
@@ -344,21 +342,11 @@ export default class Engine {
                 this.drawPixel({x: pos.x+2, y:pos.y-2}, color)
                 this.drawPixel({x: pos.x-1, y:pos.y-2}, color)
                 this.drawPixel({x: pos.x-2, y:pos.y-2}, color)
-
-
                 break;
         }
     }
 
 
-
-    public addEventListener(event: keyof HTMLElementEventMap, callback: (e: Event | UIEvent | MouseEvent) => void) {
-        this.canvas.addEventListener(event, callback)
-    }
-
-    public removeEventListener(event: keyof HTMLElementEventMap) {
-        this.canvas.removeEventListener(event, () => {})
-    }
 
 
 
