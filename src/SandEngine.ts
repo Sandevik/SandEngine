@@ -3,7 +3,7 @@ const defaultConfig: IEngineConfig = {
     updateFrequency: 30
 }
 
-export default class Engine {
+export default class SandEngine {
 
     private config: IEngineConfig; 
     private dimensions: {width: number, height: number;}

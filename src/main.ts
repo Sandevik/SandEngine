@@ -1,8 +1,8 @@
 import './style.css'
-import Engine from './Engine'
+import SandEngine from './SandEngine'
 
 
-const screen = new Engine();
+const screen = new SandEngine();
 
 
 screen.addEffect((e) => {
