@@ -1,13 +1,15 @@
 export default class Engine {
     private config: IEngineConfig; 
     private dimensions: {width: number, height: number;}
-    private state: IEngineState = {mouseOneDown: false, buttonsPressed: []};
+    private state: IEngineState = {mouseOneDown: {value: false, hasChanged: false}, buttonsPressed: {value: [], hasChanged: false}, mousePosition: {value: {x: 0, y: 0}, hasChanged: false}};
     private canvas: HTMLCanvasElement;
     private gl: WebGLRenderingContext;
     private buffer: WebGLBuffer;
     private program: WebGLProgram;
     private texture: WebGLTexture;
     private activeImageBuffer: Uint8ClampedArray
+    private bufferHasChanged: boolean;
+    private effects: IEffect[] = [];
 
     constructor(config?: IEngineConfig){
         this.config = config || {} as IEngineConfig;
@@ -22,30 +24,7 @@ export default class Engine {
         if (gl == null) throw new Error("ERROR: Could not get WebGL context from canvas")
         this.gl = gl;
 
-        window.addEventListener("resize", (e: UIEvent) => {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-            this.dimensions = {height: window.innerHeight, width: window.innerWidth}
-
-            this.gl.viewport(0,0,this.canvas.width, this.canvas.height);
-        })
-
-        this.canvas.addEventListener("mousedown", () => {
-            this.state.mouseOneDown = true;
-
-        });
-        this.canvas.addEventListener("mouseup", () => {
-            this.state.mouseOneDown = false
-        })
-
-        window.addEventListener("keydown", (e) => {
-            if (!this.state.buttonsPressed.includes(e.key)) this.state.buttonsPressed.push(e.key);
-        })
-
-        window.addEventListener("keyup", (e) => {
-            this.state.buttonsPressed = this.state.buttonsPressed.filter(key => key !== e.key);
-        })
-
+        this.addEventListeners();
 
         this.buffer = this.gl.createBuffer()!;
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
@@ -84,6 +63,7 @@ export default class Engine {
         }
 
         this.activeImageBuffer = buffer;
+        this.bufferHasChanged = true;
         this.updateScreen(buffer)
         this.loop();
 
@@ -140,7 +120,7 @@ export default class Engine {
     }
     
     public updateScreen(buffer: Uint8ClampedArray): void {
-        
+        this.bufferHasChanged = false;
         this.activeImageBuffer = buffer;
         
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
@@ -162,21 +142,102 @@ export default class Engine {
         return this.dimensions;
     }
     
+    public getState(): IEngineState {
+        return this.state
+    }
+
+
     // Some type of game loop
     private loop(): void {
         setInterval(() => {
-            //Todo: Add some type of check to see if the image buffer actually has changed before updating the screen
-            this.updateScreen(this.activeImageBuffer);
-        }, 1/(this.config.updateFrequency|| 60)*1000);
+
+
+            this.effects.forEach(effect => {
+                let effectWillRun = false;
+                effect.stateDependencies.forEach(effect => {
+                    if (this.state[effect].hasChanged) {
+                        effectWillRun = true;
+                        this.state[effect].hasChanged = false;
+                    }
+                })
+
+                // check if state dependencies has changed before running this
+                if (effectWillRun) {
+
+                    //todo: omit hasChanged Prop from state as it is unnessesary
+                    effect.fn(this.state);
+                }
+            })
+
+            if (this.bufferHasChanged) this.updateScreen(this.activeImageBuffer);
+
+        }, 1/(this.config.updateFrequency || 60)*1000);
     }
+
+    private addEventListeners(): void {
+        window.addEventListener("mousemove", (e) => {
+            const pos = {x: e.clientX, y: e.clientY}
+
+            this.state.mousePosition.value.x = pos.x;
+            this.state.mousePosition.value.y = pos.y;
+            this.state.mousePosition.hasChanged = true;
+            
+        })
+    
+        window.addEventListener("resize", () => {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.dimensions = {height: window.innerHeight, width: window.innerWidth}
+    
+            this.gl.viewport(0,0,this.canvas.width, this.canvas.height);
+        })
+    
+        window.addEventListener("mousedown", () => {
+            this.state.mouseOneDown.value = true;
+            this.state.mouseOneDown.hasChanged = true;
+        });
+    
+        window.addEventListener("mouseup", () => {
+            this.state.mouseOneDown.value = false
+            this.state.mouseOneDown.hasChanged = true;
+        })
+    
+        window.addEventListener("keydown", (e) => {
+            if (!this.state.buttonsPressed.value.includes(e.key)) this.state.buttonsPressed.value.push(e.key);
+            this.state.buttonsPressed.hasChanged = true;
+        })
+    
+        window.addEventListener("keyup", (e) => {
+            this.state.buttonsPressed.value = this.state.buttonsPressed.value.filter(key => key !== e.key);
+            this.state.buttonsPressed.hasChanged = true;
+        })
+    }
+
+    private modifyBuffer(callback: () => void) {
+        this.bufferHasChanged = true
+        callback()
+    }
+
+    public addEffect(callback: (engineState?: IEngineState) => void, dep: (keyof IEngineState)[]): void {
+        this.effects.push({fn: callback, stateDependencies: dep})
+    }
+
+
+
+
+
 
 
     public drawPixel(pos: {x: number, y: number}, color: number[]): void {
         const pixelPos = pos.x*4 + pos.y*this.canvas.width*4;
-        this.activeImageBuffer[pixelPos] = color[0];
-        this.activeImageBuffer[pixelPos + 1] = color[1];
-        this.activeImageBuffer[pixelPos + 2] = color[2];
-        this.activeImageBuffer[pixelPos + 3] = color[3];
+
+        this.modifyBuffer(() => {
+            this.activeImageBuffer[pixelPos] = color[0];
+            this.activeImageBuffer[pixelPos + 1] = color[1];
+            this.activeImageBuffer[pixelPos + 2] = color[2];
+            this.activeImageBuffer[pixelPos + 3] = color[3];
+        })
+        
     }
 
     public drawSquare(pos: {x: number, y: number}, size: "sm" | "md" | "lg" , color: number[]): void {
@@ -212,7 +273,7 @@ export default class Engine {
         }
     }
 
-    
+
 
     public addEventListener(event: keyof HTMLElementEventMap, callback: (e: Event | UIEvent | MouseEvent) => void) {
         this.canvas.addEventListener(event, callback)
@@ -221,5 +282,11 @@ export default class Engine {
     public removeEventListener(event: keyof HTMLElementEventMap) {
         this.canvas.removeEventListener(event, () => {})
     }
+
+
+
+
+
+
 
 }
