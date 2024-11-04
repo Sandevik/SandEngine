@@ -1,7 +1,7 @@
 export default class EngineUiElement implements IEngineUiElement {
     public size: {dx: number, dy: number};
     public position: {x: number, y: number};
-    public backgroundColor: number[] = [0xff,0xff,0xff,0xff];
+    public backgroundColor: ColorRGBA = [0xff,0xff,0xff,0xff];
     public onClick?: () => void;
     public overDrawable: boolean = false;
 

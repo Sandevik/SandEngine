@@ -1,6 +1,8 @@
 import './style.css'
-import SandEngine from './models/SandEngine'
-import EngineUiElement from './models/EngineUiElement';
+import SandEngine from './models/Engine/SandEngine'
+import EngineUiElement from './models/Engine/EngineUiElement';
+import Vector from './models/Math/Vector';
+import Matrix from './models/Math/Matrix';
 
 
 const screen = new SandEngine();
@@ -24,3 +26,15 @@ screen.addElement(btn);
 screen.addEffect((e) => {
   if (e?.buttonsPressed.value.includes("r")) screen.clear();
 }, ["buttonsPressed"])
+
+
+let vec1 = new Vector(3).set([1,2,3]);
+let vec2 = new Vector(3).set([4,5,6]);
+let vec3 = new Vector(3).set([7,8,9])
+
+let m = new Matrix([vec1, vec2, vec3]);
+
+let complexM = new Matrix([new Vector(3).set([7,3,2]), new Vector(3).set([4,2,5]), new Vector(3).set([2,2,2])])
+
+let vec4 = complexM.multiplyWithVector(vec3);
+console.log(vec4.vec, m.transform(complexM).print())

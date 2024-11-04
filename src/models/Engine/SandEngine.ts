@@ -54,7 +54,7 @@ export default class SandEngine {
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
 
-        const [vertexShader, fragmentShader] =  this.createShaders();
+        const [vertexShader, fragmentShader] = this.createShaders();
         this.program = this.createProgram(vertexShader, fragmentShader);
     
         const positionLocation = this.gl.getAttribLocation(this.program, "a_position");
@@ -127,15 +127,16 @@ export default class SandEngine {
         return program;
     }
     
-    public updateScreen(buffer: Uint8ClampedArray): void {
+    public updateScreen(): void {
         this.bufferHasChanged = false;
-        this.activeImageBuffer = buffer;
         
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.dimensions.width, this.dimensions.height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, buffer);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.dimensions.width, this.dimensions.height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.activeImageBuffer);
         this.render();
+        
     }
-
+    
+   
     private render(): void {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
@@ -174,7 +175,7 @@ export default class SandEngine {
                 }
             })
 
-            if (this.bufferHasChanged) this.updateScreen(this.activeImageBuffer);
+            if (this.bufferHasChanged) this.updateScreen();
 
         }, 1/(this.config.updateFrequency || 60)*1000);
     }
@@ -244,7 +245,6 @@ export default class SandEngine {
         }
         this.activeImageBuffer = currentBuf;
         this.bufferHasChanged = true;
-        this.updateScreen(currentBuf);
     }
 
     public addEffect<T extends (keyof IEngineState)>(callback: (engineState?: IEngineState) => void, dep: T[], /* specificKey: ContainsButtonPressed<T> */): void {
@@ -255,6 +255,7 @@ export default class SandEngine {
     public addElement(element: EngineUiElement): void {
         this.elements.push(element);
         this.renderElement(element);
+        this.updateScreen();
 
     }
 
@@ -300,7 +301,7 @@ export default class SandEngine {
         this.activeImageBuffer = buffer;
         this.elements.forEach(element => {this.renderElement(element)});
         this.bufferHasChanged = true;
-        this.updateScreen(buffer)
+        this.updateScreen()
     }
 
 
