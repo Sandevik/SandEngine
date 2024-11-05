@@ -32,7 +32,7 @@ type MatrixArrayConstruct<S, N> =
 
 
 interface IMatrix<S, N> {
-    mat: MatrixVectorConstruct<S, N>
-    transform(withMatrix: Matrix<S, N>): Matrix<S, N>
+    mat: MatrixVectorConstruct<S, N>;
+    transform(withMatrix: Matrix<S, N>): Matrix<S, N>;
     det(): number;
 }

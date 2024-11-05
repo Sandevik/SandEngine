@@ -103,6 +103,14 @@ export default class Vector<N extends Dimension> implements IVector<N> {
         console.log(this.vec);
     }
 
+    public dropIndex(index: number): Vector<N> {
+        if (index < 0 || index > this.length) throw new Error("ERROR: Index is out of bounce in the range of this vector.")
+        return new Vector(this.length - 1 as N).set(this.vec.filter((_, i) => i !== index) as Vec<N>)
+    }
+    public dropAllButIndex(index: number): Vector<N> {
+        if (index < 0 || index > this.length) throw new Error("ERROR: Index is out of bounce in the range of this vector.")
+        return new Vector(this.length - 1 as N).set(this.vec.filter((_, i) => i === index) as Vec<N>)
+    }
 
 }
 

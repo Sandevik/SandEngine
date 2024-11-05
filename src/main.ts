@@ -33,8 +33,6 @@ let vec2 = new Vector(3).set([4,5,6]);
 let vec3 = new Vector(3).set([7,8,9])
 
 let m = new Matrix([vec1, vec2, vec3]);
-
 let complexM = new Matrix([new Vector(3).set([7,3,2]), new Vector(3).set([4,2,5]), new Vector(3).set([2,2,2])])
 
-let vec4 = complexM.multiplyWithVector(vec3);
-console.log(vec4.vec, m.transform(complexM).print())
+console.log(complexM.det());
